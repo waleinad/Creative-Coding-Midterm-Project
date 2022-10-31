@@ -5,7 +5,8 @@ class Shape {
     this.width = width;
     this.height = height;
   }
-
+  
+  //get edge positions
   getLeft() {
     return this.x;
   }
@@ -22,18 +23,17 @@ class Shape {
     return this.y;
   }
   
+  //check within left, right, top, bottom edges
+  //based on @jonfroehlich http://makeabilitylab.io/
+  contains(x, y) {
+    return x >= this.x && x <= (this.x + this.width) &&
+           y >= this.y && y <= (this.y + this.height);
+  }
+  
   overlaps(shape){
-    // based on https://stackoverflow.com/a/4098512
     return !(this.getRight() < shape.x || 
              this.getBottom() < shape.y || 
              this.x > shape.getRight() || 
              this.y > shape.getBottom());
-  }
-
-  contains(x, y) {
-    return x >= this.x && // check within left edge
-      x <= (this.x + this.width) && // check within right edge
-      y >= this.y && // check within top edge
-      y <= (this.y + this.height); // check within bottom edge
   }
 }

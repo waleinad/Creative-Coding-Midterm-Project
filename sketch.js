@@ -1,23 +1,31 @@
-let ground;
-let avatar;
+//a mini-game inspired by some of my favourite runaway games
+//This sketch includes p5.play library:
+//https://p5play.org/
+//several related tutorials:
+//@jonfroehlich http://makeabilitylab.io/
+//https://www.youtube.com/watch?v=4Ud3oX-cKxc&t=72s
+
+let GameFont;
+let player;
 let obstacle;
-
-let isGameOver = false;
-let hasGameBegun = false; 
+let ground;
+let nextGap;
 let score = 0;
-let arcadeFont;
+let minGap = 200;
+let GameOver = false;
+let GameOn = false; 
+let success = false;
 
-let minDistanceBetweenBarriers = 100;
-let nextSpawnDistance;
-let isInvincible = false;
 
 function preload() {
-  arcadeFont = loadFont('arcadefont.ttf');
+  GameFont = loadFont('JungleAdventurer.ttf');
+  bread = loadImage('breadisrunning.gif');
 }
+
 
 function setup() {
   createCanvas(600, 400);
-  textFont(arcadeFont); 
+  textFont(GameFont); 
   ground = new Ground();
   
   resetGame();
@@ -26,22 +34,14 @@ function setup() {
   noLoop(); 
 }
 
-function resetGame(){
-  score = 0;
-  isGameOver = false; 
-  
-  avatar = new Avatar(ground.y);
-  obstacles = [new Obstacle(width, ground.y)];
-  loop();
-}
 
 function draw() {
-  background(220);
+  background(228,230,221);
   
   // draw obstacles with random gap
-  if(obstacles.length <= 0 || width - obstacles[obstacles.length - 1].x >= nextSpawnDistance){
+  if(obstacles.length <= 0 || width - obstacles[obstacles.length - 1].x >= nextGap){
     obstacles.push(new Obstacle(width, ground.y)); 
-    nextSpawnDistance = random(minDistanceBetweenObstacles, width * 1.2);
+    nextGap = random(minGap, width * 1.2);
   }
   
   // loop through all the barriers and update them
@@ -50,12 +50,12 @@ function draw() {
     obstacles[i].draw();
     
     //if we hit the barrier, end game
-    if(isInvincible != true && obstacles[i].checkIfCollision(avatar)){
-      isGameOver = true;
+    if(success != true && obstacles[i].checkIfCollision(player)){
+      GameOver = true;
       noLoop(); // game is over, stop game loop
     }
     
-    if(obstacles[i].hasScoredYet == false && obstacles[i].getRight() < avatar.x){
+    if(obstacles[i].hasScoredYet == false && obstacles[i].getRight() < player.x){
       obstacles[i].hasScoredYet = true;
       score++;
     }
@@ -66,20 +66,31 @@ function draw() {
     }
   }
   
-  avatar.update(ground.y);  
+  player.update(ground.y);  
   ground.draw();
-  avatar.draw();
+  player.draw();
   drawScore();
 }
+
+
+function resetGame(){
+  score = 0;
+  GameOver = false; 
+  
+  player = new Player(ground.y);
+  obstacles = [new Obstacle(width, ground.y)];
+  loop();
+}
+
 
 function drawScore() {
 
   fill(0);
-  textAlign(LEFT);
-  textSize(15);
-  text('Score:' + score, 10, 20);
+  textAlign(RIGHT);
+  textSize(25);
+  text('Score:' + score, 560, 50);
 
-  if (isGameOver) {
+  if (GameOver) {
 
     // dark overlay
     fill(0, 0, 0, 100);
@@ -87,67 +98,52 @@ function drawScore() {
 
     // draw game over text
     textAlign(CENTER);
-    textSize(35);
+    textSize(40);
     fill(255);
-    text('GAME OVER!', width / 2, height / 3);
+    text('GAME OVER...', width / 2, height / 1.8);
     
-    textSize(12);
-    text('Press SPACE BAR to play again.', width / 2, height / 2);
-  }else if(hasGameBegun == false){
+    textSize(20);
+    text('Press SPACE BAR to run again!', width / 2, height / 1.4);
+  }else if(GameOn == false){
     // if we're here, then the game has yet to begin for the first time
     
     // dark overlay
     fill(0, 0, 0, 100);
     rect(0, 0, width, height);
 
-    // draw game over text
+    // 
     textAlign(CENTER);
-    textSize(15);
+    textSize(25);
     fill(255);
-    text('Press SPACE BAR to play!', width / 2, height / 3);
+    text('Now you are a piece of bread...', width / 2, height / 3);
+    text('Press SPACE BAR to run away!', width / 2, height / 1.2);
   }
- 
 }
 
 
 function keyPressed(){
-  if (key == ' ' && avatar.isOnGround()){ // spacebar 
-    avatar.jump();
+  if (key == ' ' && player.isOnGround()){ // spacebar 
+    player.jump();
   } 
   
   // check for special states (game over or if game hasn't begun)
-  if (isGameOver == true && key == ' ') {
+  if (GameOver == true && key == ' ') {
     resetGame();
-  }else if(hasGameBegun == false && key == ' '){
-    hasGameBegun = true;
+  }else if(GameOn == false && key == ' '){
+    GameOn = true;
     loop();
   }
 }
 
-class Ground extends Shape{
-  constructor(){
-    let yGround = height * 0.8;
-    let groundHeight = ceil(height - yGround);
-    super(0, yGround, width, groundHeight);
-    this.fillColor = color(128); 
-  }
-  
-  draw(){
-    push();
-    noStroke();
-    fill(this.fillColor);
-    rect(this.x, this.y, this.width, this.height);
-    pop();
-  }
-}
 
+//define 3 classes from shape.js: Obstacle, Avatar, Ground
 class Obstacle extends Shape{
   constructor(x, yGround){
     let obstacleWidth = random(10, 30);
     let obstacleHeight = random(10, 40);
     let y = yGround - obstacleHeight;
     super(x, y, obstacleWidth, obstacleHeight);
-    this.fillColor = color(128); 
+    this.color = color(random(255), random(255), random(255)); 
     this.speed = 6;
     this.hasScoredYet = false;
   }
@@ -163,25 +159,26 @@ class Obstacle extends Shape{
   draw(){
     push();
     noStroke();
-    fill(this.fillColor);
+    fill(this.color);
     rect(this.x, this.y, this.width, this.height);
     pop();
   }
 }
 
-class Avatar extends Shape{
+
+class Player extends Shape{
   constructor(yGround){
-    let avatarHeight = 20;
-    super(64, yGround - avatarHeight, 10, 20);
-    this.fillColor = color(70); 
-    this.gravity = 0.9;
+    let playerHeight = 20;
+    super(64, yGround - playerHeight, 80, 66);
+    this.color = color(0); 
+    this.gravity = 0.5;
     this.jumpStrength = 15;
     this.yVelocity = 0;
     this.yGround = yGround;
   }
   
   jump(){
-    this.yVelocity += -this.jumpStrength;   
+    this.yVelocity += -this.jumpStrength;
   }
   
   isOnGround(){
@@ -190,7 +187,7 @@ class Avatar extends Shape{
 
   update() {
     this.yVelocity += this.gravity;
-    this.yVelocity *= 0.9; // some air resistance
+    this.yVelocity *= 0.94; // some air resistance
     this.y += this.yVelocity;
     
     if (this.y + this.height > this.yGround) {
@@ -203,7 +200,26 @@ class Avatar extends Shape{
   draw(){
     push();
     noStroke();
-    fill(this.fillColor);
+    fill(this.color);
+//    rect(this.x, this.y, this.width, this.height);
+    image(bread, this.x, this.y, this.width, this.height)
+    pop();
+  }
+}
+
+
+class Ground extends Shape{
+  constructor(){
+    let yGround = height * 0.65;
+    let groundHeight = ceil(height - yGround);
+    super(0, yGround, width, groundHeight);
+    this.color = color(255,238,173); 
+  }
+  
+  draw(){
+    push();
+    noStroke();
+    fill(this.color);
     rect(this.x, this.y, this.width, this.height);
     pop();
   }
